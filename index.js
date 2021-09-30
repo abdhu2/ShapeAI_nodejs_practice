@@ -1,12 +1,38 @@
 // MAIN BACKEND FILE
 
-const db = require("./database/index.js");
-
-
+const db = require("./database");
 const express = require('express');
-const { json } = require("express");
+const BookModel = require("./database/book");
+//const {MongoClient} = require('mongodb'); 
+//const { json } = require("express");
 const app = express ();
 app.use(express.json());
+
+
+var mongoose = require('mongoose');
+var mongodb = "mongodb+srv://Ibrahim_Abdalla:Abdhu-97@cluster0.dy0ej.mongodb.net/BOOK-COMPANY?retryWrites=true&w=majority";
+mongoose.connect(mongodb, { useNewUrlParser: true, useUnifiedTopology: true }).then(()=>console.log("CONNECTED"));
+
+
+
+// this also one of the method connect db
+//const { MongoClient } = require('mongodb');
+// const uri = "mongodb+srv://Ibrahim_Abdalla:Abdhu-97@cluster0.dy0ej.mongodb.net/BOOK-COMPANY?retryWrites=true&w=majority";
+// const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+// client.connect(err => {
+//   const collection = client.db("BOOK-COMPANY").collection("books").findOne({ISBN:"12345Three"});
+//   console.log(collection);
+//   // perform actions on the collection object
+//   collection.then((data)=>console.log(data)).catch((err)=>console.log(err));
+// });
+// client.close();
+
+
+
+
+
+
+
 
 //localhost:3000
 app.get ("/",(req, res)=>{
@@ -14,28 +40,28 @@ app.get ("/",(req, res)=>{
 });
 
 // localhost:300/books
-app.get("/books",(req,res)=>{
-    const getAllBooks =db.books;
+app.get("/books",async(req,res)=>{
+    const getAllBooks =await BookModel.find();
     return res.json(getAllBooks);
 });
 
 
 //localhost:3000/book-isbn/12345Two
-app.get("/book-isbn/:isbn",(req, res)=>{
+app.get("/book-isbn/:isbn",async(req, res)=>{
     const {isbn}= req.params;
     //console.log(isbn);
-    const getSpecificBook =db.books.filter((book)=>book.ISBN === isbn);
+    const getSpecificBook = await BookModel.findOne({ISBN :isbn });
    // console.log(GetSpecificBook);
-   if(getSpecificBook.length ===0){
+   if(getSpecificBook===null){
        return res.json({"Error " : `No book is found for this ISBN ${isbn}`});
    }
-   return res.json(getSpecificBook[0]);
+   return res.json(getSpecificBook);
 });
 
 //localhost:3000/book-category/programming
-app.get("/book-category/:category",(req,res)=>{
+app.get("/book-category/:category",async (req,res)=>{
     const {category}=req.params;
-    const getSpecificBooks = db.books.filter((book)=>book.category.includes(category));
+    const getSpecificBooks = await BookModel.find({category:category});
 
     if(getSpecificBooks.length ===0){
         return res.json({"Error": `No book avilable for this category : ${category}`});
@@ -44,23 +70,24 @@ app.get("/book-category/:category",(req,res)=>{
 });
 
 //localhost:3000/authors
-app.get("/authors" ,(req,res)=>{
-    const getAllAuthors =db.authors;
-    return res.json(getAllAuthors);
-});
+// app.get("/authors",async(req,res)=>{
+
+//     const getAllAuthors =await BookModel.find();
+//     return res.json(getAllAuthors);
+// });
 
 //localhost:3000/auther-id/1
-app.get("/author-id/:id", (req,res)=>{
-    let {id}=req.params;
-    id = Number(id);
-    const getSpecificAuthor =db.authors.filter((author)=>author.id === id);
+// app.get("/author-id/:id",async (req,res)=>{
+//     let {id}=req.params;
+//    // id = Number(id);
+//     const getSpecificAuthor = await BookModel.findOne({id : id});
 
-    if(getSpecificAuthor.length ===0)
-    {
-        return res.json({"Error ":`There is no Author founded for this id ${id}`});
-    }
-    return res.json(getSpecificAuthor[0]);
-});
+//     if(getSpecificAuthor === null)
+//     {
+//         return res.json({"Error ":`There is no Author founded for this id ${id}`});
+//     }
+//     return res.json(getSpecificAuthor[0]);
+// });
 
 //localhost:3000/author-isbn/12345Two
 app.get("/author-isbn/:isbn",(req,res)=>{
@@ -95,11 +122,13 @@ app.get("/publication-isbn/:isbn", (req, res) => {
 });
 
 //localhost:3000/book
-app.post("/book", (req, res) => {
+app.post("/book", async(req, res) => {
    // const  {newBook}=req.body;
-    db.books.push(req.body);
-   // console.log(newBook);
-    return res.json(db.books);
+   const addNewBook =await BookModel.create(req.body);
+   return res.json({
+       books:addNewBook,
+       message:"book was added"
+   });
 });
 
 //localhost:3000/author
@@ -117,17 +146,12 @@ app.post("/publication", (req, res) => {
     return res.json(db.publications);
 });
 
-//localhost:3000/book-update/12345ONE
-app.put("/book-update/:isbn",(req,res)=>{
+//localhost:3000/book-update/12345Three
+app.put("/book-update/:isbn",async(req,res)=>{
     const {isbn}=req.params;
-    db.books.forEach((book)=>{
-        if(book.ISBN === isbn) {
-           // console.log({...book, ...req.body});
-            return {...book, ...req.body};
-        }
-        return book;
-    })
-    return res.json(db.books);
+    const updateBook = await BookModel.findOneAndUpdate({ISBN : isbn}, req.body, {new : true});
+    return res.json({bookUpdated : updateBook, message : "book was updated!!!"});
+   
 });
 
 //localhost:3000/author-update/1
@@ -161,13 +185,10 @@ app.put("/publication-update/:id", (req, res) => {
 });
 
 //localhost:3000/book-delete/12345ONE
-app.delete("/book-delete/:isbn",(req,res)=>{
+app.delete("/book-delete/:isbn",async(req,res)=>{
     const {isbn}=req.params;
-   const filteredBook= db.books.filter((book)=>book.ISBN !== isbn);
- //  console.log(filteredBook);
-   db.books=filteredBook;
-   return res,json(db.books);
-
+    const deleteBook = await BookModel.deleteOne({ISBN : isbn});
+    return res.json({bookDeleted : deleteBook, message : "book was deleted!!!"});
 });
 
 //localhost:3000/book-author-delete/12345ONE/1
