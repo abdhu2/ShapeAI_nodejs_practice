@@ -1,7 +1,7 @@
 // MAIN BACKEND FILE
 
 //const db = require("./database");
-
+require('dotenv').config();
 const express = require('express');
 const BookModel = require("./database/book");
 const AuthorModel = require("./database/author");
@@ -14,7 +14,7 @@ app.use(express.json());
 
 var mongoose = require('mongoose');
 const { json } = require("express");
-var mongodb =MONGODB_URI;
+var mongodb =process.env.MONGODB_URI;
 mongoose.connect(mongodb, { useNewUrlParser: true, useUnifiedTopology: true }).then(()=>console.log("CONNECTED"));
 
 
