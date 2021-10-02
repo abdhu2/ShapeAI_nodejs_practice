@@ -1,8 +1,11 @@
 // MAIN BACKEND FILE
 
-const db = require("./database");
+//const db = require("./database");
+
 const express = require('express');
 const BookModel = require("./database/book");
+const AuthorModel = require("./database/author");
+const publicationModel = require("./database/publication");
 //const {MongoClient} = require('mongodb'); 
 //const { json } = require("express");
 const app = express ();
@@ -10,7 +13,8 @@ app.use(express.json());
 
 
 var mongoose = require('mongoose');
-var mongodb = "mongodb+srv://Ibrahim_Abdalla:Abdhu-97@cluster0.dy0ej.mongodb.net/BOOK-COMPANY?retryWrites=true&w=majority";
+const { json } = require("express");
+var mongodb =MONGODB_URI;
 mongoose.connect(mongodb, { useNewUrlParser: true, useUnifiedTopology: true }).then(()=>console.log("CONNECTED"));
 
 
@@ -70,50 +74,47 @@ app.get("/book-category/:category",async (req,res)=>{
 });
 
 //localhost:3000/authors
-// app.get("/authors",async(req,res)=>{
-
-//     const getAllAuthors =await BookModel.find();
-//     return res.json(getAllAuthors);
-// });
+app.get("/authors",async(req,res)=>{
+    const getAllAuthors =await AuthorModel.find();
+    return res.json(getAllAuthors);
+});
 
 //localhost:3000/auther-id/1
-// app.get("/author-id/:id",async (req,res)=>{
-//     let {id}=req.params;
-//    // id = Number(id);
-//     const getSpecificAuthor = await BookModel.findOne({id : id});
+app.get("/author-id/:id",async (req,res)=>{
+    const {id}=req.params;
+   // id = Number(id);
+    const getSpecificAuthor = await AuthorModel.findOne({id : id});
 
-//     if(getSpecificAuthor === null)
-//     {
-//         return res.json({"Error ":`There is no Author founded for this id ${id}`});
-//     }
-//     return res.json(getSpecificAuthor[0]);
-// });
+    if(getSpecificAuthor === null)
+    {
+        return res.json({"Error ":`There is no Author founded for this id ${id}`});
+    }
+    return res.json(getSpecificAuthor);
+});
 
-//localhost:3000/author-isbn/12345Two
-app.get("/author-isbn/:isbn",(req,res)=>{
+//localhost:3000/author-isbn/12345ONE
+app.get("/author-isbn/:isbn",async(req,res)=>{
     const {isbn}=req.params;
    
-    const getAuthorsIsbn = db.authors.filter((author)=>author.books.includes(isbn));
-
-     if(getAuthorsIsbn.length ===0)
-     {
-         return res.json({"Error ":`There is no Author founded for this isbn ${isbn}`});
-     }
-         return res.json(getAuthorsIsbn);
+    const getAuthorsByIsbn = await AuthorModel.findOne({books: isbn});
+    if(getAuthorsByIsbn === null){
+        return res.json({"Error ":`There is no Author founded for this id ${isbn}`});
+    }
+    return res.json (getAuthorsByIsbn);
 });
 
 //localhost:3000/publications
-app.get("/publications", (req, res) => {
-    const getAllPublications = db.publications;
-    return res.json(getAllPublications);
+app.get("/publications", async(req, res) => {
+   const getALLPublications =await publicationModel.find();
+   return res.json(getALLPublications);
 });
 
-//localhost:3000/publication-isbn/12345Two
-app.get("/publication-isbn/:isbn", (req, res) => {
+//localhost:3000/publication-isbn/12345Three
+app.get("/publication-isbn/:isbn", async(req, res) => {
 
     const {isbn}=req.params;
-    const getPublicationByIsbn= db.publications.filter((publication)=> publication.books.includes(isbn) );
-    if(getPublicationByIsbn.length ===0)
+    const getPublicationByIsbn= await publicationModel.findOne({books :isbn});
+    if(getPublicationByIsbn===null)
     {
         return res.json({"Error ":`There is no publication founded for this isbn ${isbn}`});
     }
@@ -132,18 +133,23 @@ app.post("/book", async(req, res) => {
 });
 
 //localhost:3000/author
-app.post("/author", (req, res) => {
+app.post("/author", async(req, res) => {
     // console.log(req.body);
-    db.authors.push(req.body);
-    return res.json(db.authors);
+    const addNewAuthor = await AuthorModel.create(req.body);
+    return res.json({
+        authors:addNewAuthor,
+        message: "Author was added"
+    });
 });
 
 //localhost:3000/publication
-app.post("/publication", (req, res) => {
-
-    db.publications.push(req.body);
-    //console.log(req.body);
-    return res.json(db.publications);
+app.post("/publication", async (req, res) => {
+    const addNewPublication = await publicationModel.create(req.body);
+    return res.json({
+        publications : addNewPublication,
+        message :"Publication was added"
+    });
+   
 });
 
 //localhost:3000/book-update/12345Three
@@ -155,36 +161,22 @@ app.put("/book-update/:isbn",async(req,res)=>{
 });
 
 //localhost:3000/author-update/1
-app.put("/author-update/:id", (req, res) => {
-    let {id}= req.params;
-    id = Number(id);
-    db.authors.forEach((author)=>{
-        if(author.id === id)
-        {
-            //console.log({...author, ...req.body});
-            return {...author, ...req.body};
-        }
-        return author;
-    })
-    return res.json(db.authors);
-});
+app.put("/author-update/:id",async (req, res) => {
+    const {id}= req.params;
+    //id = Number(id);
+    const authorUpdate = await AuthorModel.findOneAndUpdate({id : id },req.body,{new : true});
+    return res.json(authorUpdate);
+    });
+
 
 //localhost:3000/publication-update/1
-app.put("/publication-update/:id", (req, res) => {
-    let {id} = req.params;
-    id = Number(id);
-    db.publications.forEach((publication)=>{
-        if(publication.id === id)
-        {
-            console.log({...publication,...req.body});
-            return {...publication,...req.body};
-        }
-        return publication;
-    })
-    return res.json(db.publications);
+app.put("/publication-update/:id",async (req, res) => {
+    const {id} = req.params;
+    const updatePublication = await publicationModel.findOneAndUpdate({id : id}, req.body, {new : true});
+    return res.json(updatePublication);
 });
 
-//localhost:3000/book-delete/12345ONE
+//localhost:3000/book-delete/12345six
 app.delete("/book-delete/:isbn",async(req,res)=>{
     const {isbn}=req.params;
     const deleteBook = await BookModel.deleteOne({ISBN : isbn});
@@ -192,61 +184,49 @@ app.delete("/book-delete/:isbn",async(req,res)=>{
 });
 
 //localhost:3000/book-author-delete/12345ONE/1
-app.delete("/book-author-delete/:isbn/:id",(req,res)=>{
-    let {isbn,id}= req.params;
-    id=Number(id);
-    db.books.forEach((book)=>{
-        if(book.ISBN ===isbn){
-            if(!book.authors.includes(id)){
-                return;
-            }
-            book.authors=book.authors.filter((author)=> author!=id);
-            return book;
-        }
-        return book;
-    })
-    return res.json(db.books);
+app.delete("/book-author-delete/:isbn/:id",async(req,res)=>{
+    const {isbn, id} = req.params;
+    let getSpecificBook = await BookModel.findOne({ISBN: isbn});
+    if(getSpecificBook===null) {
+        return res.json({"error": `No Book found for the ISBN of ${isbn}`});
+    }
+    else {
+        getSpecificBook.authors.remove(id);
+        const updateBook = await BookModel.findOneAndUpdate({ISBN: isbn}, getSpecificBook, {new: true});
+        return res.json( {bookUpdated: updateBook, message: "Author was Deleted from the Book !!!"} );
+    }
 });
 
-//localhost:3000/author-book-delete/1/12345ONE
-app.delete("/author-book-delete/:id/:isbn", (req, res) => {
-    let {id,isbn}=req.params;
-    id =Number(id);
-    db.authors.forEach((author)=>{
-        if(author.id === id){
-            if(!author.books.includes(isbn)){
-                return;
-            }
-            author.books=author.books.filter((book)=> book!=isbn);
-            return author;
-        }
-        return author;
-    });
-    return res.json(db.authors);
+//localhost:3000/author-book-delete/1/12345Two
+app.delete("/author-book-delete/:id/:isbn",async (req, res) => {
+    const {id,isbn}=req.params;
+    let getSpecificAuthor = await AuthorModel.findOne({id : id});
+    if(getSpecificAuthor === null)
+    {
+        return res.json({"error": `No Author found for the id of ${id}`});
+    }
+    else{
+        getSpecificAuthor.books.remove(isbn);
+        const updateAuthor = await AuthorModel.findOneAndUpdate({id : id }, getSpecificAuthor, {new : true});
+        return res.json({authorUpdate: updateAuthor, message: "Book was Deleted from the Author !!!"});
+    }
 
 });
 
 //localhost:3000/author-delete/1
-app.delete("/author-delete/:id", (req, res) => {
-    let {id}= req.params;
-    id = Number(id);
+app.delete("/author-delete/:id",async (req, res) => {
+    const {id}= req.params;
 
-    const filteredAuthors = db.authors.filter((author)=> author.id!==id);
-    //console.log(filteredAuthors);
-    db.authors=filteredAuthors;
-    return res.json(db.authors);
-
-
+    const deleteAuthor = await AuthorModel.deleteOne({id : id});
+    return res.json({authorDeleted : deleteAuthor, message : "Author was deleted!!!"});
 });
 
 //localhost:3000/publication-delete/2
-app.delete("/publication-delete/:id", (req, res) => {
-    let {id}= req.params;
-    id = Number(id);
-    const filteredPublications = db.publications.filter((publication)=> publication.id!==id);
-    console.log(filteredPublications);
-    db.publications=filteredPublications;
-    return res.json(db.publications);
+app.delete("/publication-delete/:id",async (req, res) => {
+    const {id}= req.params;
+    const deletePublication = await publicationModel.deleteOne({id : id});
+    return res.json({publicationDeleted : deletePublication, message : "Publication was deleted!!!"});
+    
 });
 
 
